@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy
-
+from copy import copy
 def sort_lexico(iter):
     if not isinstance(iter, list):
         iter = list(iter)
@@ -25,7 +25,8 @@ class Problem():
         self.yes_len = len(self.yes_instances)
         self.no_instance_to_index = {self.no_instances[i] : i for i in range(len(self.no_instances))}
         self.yes_instance_to_index = {self.yes_instances[i] : i for i in range(len(self.yes_instances))}
-
+        self.instance_to_index = copy(self.no_instance_to_index)
+        self.instance_to_index.update({instance: self.yes_instance_to_index[instance] + self.no_len for instance in self.yes_instance_to_index})
         self.no_labels = [''.join([str(x) for x in no]) for no in self.no_instances]
         self.yes_labels = [''.join([str(x) for x in yes]) for yes in self.yes_instances]
 
@@ -33,7 +34,11 @@ class Problem():
         for instance in no_instances + yes_instances:
             for v in instance:
                 self.alphabet.add(v)
-
+        self.alphabet = list(self.alphabet)
+        self.alphabet.sort()
+        self.alphabet = tuple(self.alphabet)
+        
+        
     def __str__(self):
         to_print = 'No:' + str(self.no_instances) + '\n' + 'Yes:' + str(self.yes_instances)
         return to_print
