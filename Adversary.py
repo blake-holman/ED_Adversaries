@@ -44,7 +44,7 @@ class Problem():
         return to_print
 
 
-def visualize(mat, labels=None):
+def visualize(mat, labels=None, save=None):
     fig, ax = plt.subplots()
     heatmap = ax.imshow(mat)
     plt.colorbar(heatmap)
@@ -56,7 +56,10 @@ def visualize(mat, labels=None):
 
         ax.set_xticklabels(xlabels, rotation=90)
         ax.set_yticklabels(ylabels)
-    plt.show()
+    if save is not None:
+        plt.savefig(save)
+    else:
+        plt.show()
 
 
 class Adversary():
@@ -88,9 +91,9 @@ class Adversary():
     def adv(self):
         return self.norm() / np.max([self.partial_norm(i) for i in range(self.problem.n)])
 
-    def visualize_matrix(self):
-        visualize(self.matrix, (self.problem.no_labels, self.problem.yes_labels))
-
+    def visualize_matrix(self, save=None):
+        visualize(self.matrix, (self.problem.no_labels, self.problem.yes_labels), save=save)
+        
     def visualize_partial(self, i, reduced=False):
         if reduced:
             pass
