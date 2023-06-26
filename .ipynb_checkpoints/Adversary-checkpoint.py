@@ -7,6 +7,9 @@ def sort_lexico(iter):
         iter = list(iter)
     iter.sort(key=lambda L: ''.join([str(x) for x in L]))
 
+def to_str(L):
+    return ''.join([str(x) for x in L])
+            
 def hamming_dist(a, b):
     assert len(a) == len(b)
     return len([i for i in range(len(a)) if a[i] != b[i]])
@@ -63,12 +66,19 @@ def visualize(mat, labels=None, save=None):
 
 
 class Adversary():
-    def __init__(self, problem, matrix_assignment_func):
+    def __init__(self, problem, matrix_assignment_func=None, matrix= None):
         self.problem = problem
-        self.matrix = np.zeros((problem.yes_len, problem.no_len))
-        for i in range(problem.yes_len):
-            for j in range(problem.no_len):
-                self.matrix[i, j] = matrix_assignment_func(problem.yes_instances[i], problem.no_instances[j])
+        if matrix_assignment_func is not None:
+            self.matrix = np.zeros((problem.yes_len, problem.no_len))
+            for i in range(problem.yes_len):
+                for j in range(problem.no_len):
+                    self.matrix[i, j] = matrix_assignment_func(problem.yes_instances[i], problem.no_instances[j])
+        elif matrix is not None:
+            if matrix.shape == (problem.yes_len, problem.no_len):
+                self.matrix = matrix
+            elif matrix.shape == (problem.yes_len + problem.no_len, problem.yes_len + problem.no_len):
+                self.matrix = matrix[problem.no_len:, :problem.no_len]
+            
 
     def partial_matrix(self, str_i, reduced=False):
         if reduced:

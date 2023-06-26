@@ -98,6 +98,6 @@ def adv_solver(problem):
             type_mask(problem), L
         ))
     prob = cp.Problem(cp.Maximize(opt_func), constraints)
-    prob.solve()
-    return prob.value, L.value, M.value
+    prob.solve(solver='MOSEK')
+    return Adversary(problem, matrix=L.value)
     
