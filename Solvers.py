@@ -80,7 +80,9 @@ def span_solver(problem):
     prob.solve()
     return prob.value, X.value
 
-def adv_solver(problem):
+def adv_solver(problem, solver_params=None):
+    if solver_params is None:
+        solver_params = {'solver':'MOSEK', 'verbose': True}
     lang_size = problem.yes_len + problem.no_len
     n = problem.n
     mat_size = lang_size 
@@ -98,6 +100,6 @@ def adv_solver(problem):
             type_mask(problem), L
         ))
     prob = cp.Problem(cp.Maximize(opt_func), constraints)
-    prob.solve(solver='MOSEK')
+    prob.solve(**solver_params)
     return Adversary(problem, matrix=L.value)
     

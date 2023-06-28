@@ -51,14 +51,19 @@ def visualize(mat, labels=None, save=None):
     fig, ax = plt.subplots()
     heatmap = ax.imshow(mat)
     plt.colorbar(heatmap)
+    plt.tight_layout()
+    figh, figw = fig.get_size_inches()
+    font_sizey = figh * 72 / mat.shape[0] / 3
+    # font_sizex = figw * 72 / mat.shape[1] / 3
+    # fig.set_size_inches(mat., mat.shape[1]/5)
     if labels is not None:
         fig.subplots_adjust(bottom=0.25, left=0.25)
         xlabels, ylabels = labels
-        ax.set_xticks(np.arange(mat.shape[1]), minor=False)
+        ax.set_xticks(np.arange(mat.shape[1]), minor=False, )
         ax.set_yticks(np.arange(mat.shape[0]), minor=False)
 
-        ax.set_xticklabels(xlabels, rotation=90)
-        ax.set_yticklabels(ylabels)
+        ax.set_xticklabels(xlabels, rotation=90, fontsize=font_sizey)
+        ax.set_yticklabels(ylabels, fontsize=font_sizey)
     if save is not None:
         plt.savefig(save)
     else:
@@ -78,7 +83,8 @@ class Adversary():
                 self.matrix = matrix
             elif matrix.shape == (problem.yes_len + problem.no_len, problem.yes_len + problem.no_len):
                 self.matrix = matrix[problem.no_len:, :problem.no_len]
-            
+        else:
+            print('mat:' + str(matrix))
 
     def partial_matrix(self, str_i, reduced=False):
         if reduced:
