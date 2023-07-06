@@ -66,7 +66,27 @@ def big_mask_index_disagree_type(problem, yes_instance, no_instance):
     return np.block(big)
     # target = [np.zeros((lang_size, lang_size))]*i + [partial(problem, i)] + [np.zeros((lang_size, lang_size))]*(n-i-1)
     return np.block([[np.zeros((lang_size, lang_size))]*i + [type_mask(problem)] + [np.zeros((lang_size, lang_size))]*(n-i-1) for i in range(n)])
-def span_solver(problem):
+
+def span_solver2(problem, solver_params=None):
+    if solver_params is None:
+        solver_params = {'solver':'MOSEK', 'verbose': True}
+    lang_size = problem.yes_len + problem.no_len
+    n = problem.n
+    mat_size = lang_size * n
+    X = cp.Variable((mat_size, mat_size), symmetric=True)
+    t = cp.Variable()
+    s = cp.Variable()
+    I = np.identity(mat_size)
+    constraints = [X >> 0, cp.trace(X) <= s]
+    constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
+    constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
+    prob = cp.Problem(cp.Minimize(t + s), constraints)
+    prob.solve(**solver_params)
+    return prob.value, X.value
+
+def span_solver(problem, solver_params=None):
+    if solver_params is None:
+        solver_params = {'solver':'MOSEK', 'verbose': True}
     lang_size = problem.yes_len + problem.no_len
     n = problem.n
     mat_size = lang_size * n
@@ -77,8 +97,9 @@ def span_solver(problem):
     constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
     constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
     prob = cp.Problem(cp.Minimize(t), constraints)
-    prob.solve()
+    prob.solve(**solver_params)
     return prob.value, X.value
+
 
 def adv_solver(problem, solver_params=None):
     if solver_params is None:
