@@ -73,14 +73,22 @@ def span_solver2(problem, solver_params=None):
     lang_size = problem.yes_len + problem.no_len
     n = problem.n
     mat_size = lang_size * n
-    X = cp.Variable((mat_size, mat_size), symmetric=True)
+    X = cp.Variable((mat_size, mat_size), PSD=True)
     t = cp.Variable()
-    s = cp.Variable()
+    # s = cp.Variable()
     I = np.identity(mat_size)
-    constraints = [X >> 0, cp.trace(X) <= s]
+    constraints = [X >= np.zeros(X.shape)]
+    super_mask = np.kron(np.identity(n), np.ones((lang_size, lang_size)))
+    plt.imshow(np.ones(X.shape)-super_mask)
+    plt.colorbar()
+    plt.show()
+    constraints += [cp.multiply(np.ones(X.shape)-super_mask, X)==np.zeros(X.shape)]
+    # constraints = [np.linalg.matrix_rank(X) <= s]
+    # constraints = [cp.trace(X) <= s]
     constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
     constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
-    prob = cp.Problem(cp.Minimize(t + s), constraints)
+    prob = cp.Problem(cp.Minimize(t), constraints)
+    print(solver_params)
     prob.solve(**solver_params)
     return prob.value, X.value
 
@@ -90,10 +98,10 @@ def span_solver(problem, solver_params=None):
     lang_size = problem.yes_len + problem.no_len
     n = problem.n
     mat_size = lang_size * n
-    X = cp.Variable((mat_size, mat_size), symmetric=True)
+    X = cp.Variable((mat_size, mat_size), PSD=True)
     t = cp.Variable()
     I = np.identity(mat_size)
-    constraints = [X >> 0]
+    constraints = []
     constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
     constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
     prob = cp.Problem(cp.Minimize(t), constraints)
