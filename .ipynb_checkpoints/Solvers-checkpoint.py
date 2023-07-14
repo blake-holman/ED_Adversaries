@@ -67,7 +67,7 @@ def big_mask_index_disagree_type(problem, yes_instance, no_instance):
     # target = [np.zeros((lang_size, lang_size))]*i + [partial(problem, i)] + [np.zeros((lang_size, lang_size))]*(n-i-1)
     return np.block([[np.zeros((lang_size, lang_size))]*i + [type_mask(problem)] + [np.zeros((lang_size, lang_size))]*(n-i-1) for i in range(n)])
 
-def span_solver2(problem, solver_params=None):
+def span_solver2(problem, r, solver_params=None):
     if solver_params is None:
         solver_params = {'solver':'MOSEK', 'verbose': True}
     lang_size = problem.yes_len + problem.no_len
@@ -83,8 +83,8 @@ def span_solver2(problem, solver_params=None):
     plt.colorbar()
     plt.show()
     constraints += [cp.multiply(np.ones(X.shape)-super_mask, X)==np.zeros(X.shape)]
-    # constraints = [np.linalg.matrix_rank(X) <= s]
-    # constraints = [cp.trace(X) <= s]
+    # constraints = [np.linalg.matrix_rank(X) <= r]
+    constraints = [cp.trace(X) <= r]
     constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
     constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
     prob = cp.Problem(cp.Minimize(t), constraints)
@@ -130,5 +130,30 @@ def adv_solver(problem, solver_params=None):
         ))
     prob = cp.Problem(cp.Maximize(opt_func), constraints)
     prob.solve(**solver_params)
+    return Adversary(problem, matrix=L.value)
+    
+def space_adv_solver(problem, s, solver_params=None):
+    if solver_params is None:
+        solver_params = {'solver':'MOSEK', 'verbose': True}
+    lang_size = problem.yes_len + problem.no_len
+    n = problem.n
+    mat_size = lang_size 
+    L = cp.Variable((lang_size, lang_size), symmetric=True)
+    M = cp.Variable((lang_size))
+    space_var = cp.Variable()
+    constraints = [cp.diag(M) + space_var + np.eye(lang_size) >> cp.multiply(L, partial(problem, j)) for j in range(n)]
+    constraints += [cp.sum(M) == 1]
+    constraints += [M >= 0]
+    # L is an adversary matrix
+    constraints += [
+        cp.multiply(L, np.ones((mat_size, mat_size)) - type_mask(problem)) == 0 
+    ]
+    opt_func = cp.sum(
+        cp.multiply(
+            type_mask(problem), L
+        ))
+    prob = cp.Problem(cp.Maximize(opt_func - s * space_var), constraints)
+    prob.solve(**solver_params)
+    print(space_var.value)
     return Adversary(problem, matrix=L.value)
     

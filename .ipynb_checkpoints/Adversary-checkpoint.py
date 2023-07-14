@@ -26,6 +26,7 @@ class Problem():
             sort_lexico(self.yes_instances)
         self.no_len = len(self.no_instances)
         self.yes_len = len(self.yes_instances)
+        self.len = self.no_len + self.yes_len
         self.no_instance_to_index = {self.no_instances[i] : i for i in range(len(self.no_instances))}
         self.yes_instance_to_index = {self.yes_instances[i] : i for i in range(len(self.yes_instances))}
         self.instance_to_index = copy(self.no_instance_to_index)
