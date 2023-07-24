@@ -92,7 +92,7 @@ def span_solver2(problem, r, solver_params=None):
     prob.solve(**solver_params)
     return prob.value, X.value
 
-def span_solver(problem, solver_params=None):
+def span_solver(problem, solver_params=None, mode=None):
     if solver_params is None:
         solver_params = {'solver':'MOSEK', 'verbose': True}
     lang_size = problem.yes_len + problem.no_len
@@ -102,13 +102,30 @@ def span_solver(problem, solver_params=None):
     t = cp.Variable()
     I = np.identity(mat_size)
     constraints = []
+    if mode is not None:
+        if mode[0] == 'trace':
+            constraints += [cp.trace(X) <= mode[1]]
     constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
     constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
-    prob = cp.Problem(cp.Minimize(t), constraints)
+    if mode is not None and mode == 'min_trace':
+        prob = cp.Problem(cp.Minimize(cp.trace(X)), constraints)
+    else:
+        prob = cp.Problem(cp.Minimize(t), constraints)
     prob.solve(**solver_params)
     return prob.value, X.value
 
-
+def real_adv_solver(problem):
+    lang_size = problem.yes_len + problem.no_len
+    n = problem.n
+    mat_size = lang_size 
+    L = cp.Variable((lang_size, lang_size), symmetric=True)
+    constraints = [cp.norm(cp.multiply(L, partial(problem, j)), 2) <= 1 for j in range(n)]
+    opt_prob = cp.Problem(cp.Maximize(cp.norm(L, 2)), constraints)
+    opt_prob.solve()
+    return Adversary(problem, matrix=L.value)
+    
+    
+    
 def adv_solver(problem, solver_params=None):
     if solver_params is None:
         solver_params = {'solver':'MOSEK', 'verbose': True}
@@ -130,30 +147,42 @@ def adv_solver(problem, solver_params=None):
         ))
     prob = cp.Problem(cp.Maximize(opt_func), constraints)
     prob.solve(**solver_params)
-    return Adversary(problem, matrix=L.value)
-    
-def space_adv_solver(problem, s, solver_params=None):
+    return Adversary(problem, matrix=L.value), M.value
+
+def outer(a, b):
+    a = cp.Expression.cast_to_const(a)  # if a is an Expression, return it unchanged.
+    assert a.ndim == 1
+    b = cp.Expression.cast_to_const(b)
+    assert b.ndim == 1
+    a = cp.reshape(a, (a.size, 1))
+    b = cp.reshape(b, (1, b.size))
+    expr = a @ b
+    return expr
+
+def space_adv_prob(problem, solver_params=None):
     if solver_params is None:
-        solver_params = {'solver':'MOSEK', 'verbose': True}
+        solver_params = {'solver':'MOSEK', 'verbose': False}
     lang_size = problem.yes_len + problem.no_len
     n = problem.n
     mat_size = lang_size 
-    L = cp.Variable((lang_size, lang_size), symmetric=True)
-    M = cp.Variable((lang_size))
-    space_var = cp.Variable()
-    constraints = [cp.diag(M) + space_var + np.eye(lang_size) >> cp.multiply(L, partial(problem, j)) for j in range(n)]
+    A = cp.Variable((lang_size, lang_size), symmetric=True, name='A')
+    M = cp.Variable((lang_size), name='M')
+    r = cp.Parameter(nonneg=True, name='r')
+    space_var = cp.Variable(name='space_var')
+    constraints = [cp.diag(M) + space_var * np.eye(lang_size) >> cp.multiply(A, partial(problem, j)) for j in range(n)]
     constraints += [cp.sum(M) == 1]
     constraints += [M >= 0]
+    constraints += [space_var >= 0]
     # L is an adversary matrix
     constraints += [
-        cp.multiply(L, np.ones((mat_size, mat_size)) - type_mask(problem)) == 0 
+        cp.multiply(A, np.ones((mat_size, mat_size)) - type_mask(problem)) == 0 
     ]
-    opt_func = cp.sum(
-        cp.multiply(
-            type_mask(problem), L
-        ))
-    prob = cp.Problem(cp.Maximize(opt_func - s * space_var), constraints)
-    prob.solve(**solver_params)
-    print(space_var.value)
-    return Adversary(problem, matrix=L.value)
+
+    prob = cp.Problem(cp.Maximize(cp.sum(A) - r * space_var), constraints)
+    # prob.solve(**solver_params)
+    return prob
+
+def space_adv_solver(opt_prob, solver_params=None):
+    opt_prob.solve(opt_prob)
+#     return opt_prob.
     

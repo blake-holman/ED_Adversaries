@@ -21,6 +21,7 @@ class Problem():
             assert len(instance) == self.n
         self.no_instances = no_instances
         self.yes_instances = yes_instances
+        self.instances = no_instances + yes_instances
         if sort:
             sort_lexico(self.no_instances)
             sort_lexico(self.yes_instances)
@@ -42,7 +43,6 @@ class Problem():
         self.alphabet.sort()
         self.alphabet = tuple(self.alphabet)
         
-        
     def __str__(self):
         to_print = 'No:' + str(self.no_instances) + '\n' + 'Yes:' + str(self.yes_instances)
         return to_print
@@ -51,16 +51,21 @@ class Problem():
 def visualize(mat, labels=None, save=None):
     fig, ax = plt.subplots()
     heatmap = ax.imshow(mat)
-    plt.colorbar(heatmap)
     plt.tight_layout()
     figh, figw = fig.get_size_inches()
-    font_sizey = figh * 72 / mat.shape[0] / 3
-    # font_sizex = figw * 72 / mat.shape[1] / 3
+    font_sizey = figh * 72  / 3 
+    font_sizey = font_sizey / np.max(mat.shape)
+    font_sizex = figw * 72  / 3 / np.mat(mat.shape)
+    
     # fig.set_size_inches(mat., mat.shape[1]/5)
+    plt.colorbar(heatmap)
     if labels is not None:
         fig.subplots_adjust(bottom=0.25, left=0.25)
         xlabels, ylabels = labels
-        ax.set_xticks(np.arange(mat.shape[1]), minor=False, )
+        print(xlabels)
+        print(ylabels)
+        print(mat.shape)
+        ax.set_xticks(np.arange(mat.shape[1]), minor=False)
         ax.set_yticks(np.arange(mat.shape[0]), minor=False)
 
         ax.set_xticklabels(xlabels, rotation=90, fontsize=font_sizey)
@@ -72,7 +77,7 @@ def visualize(mat, labels=None, save=None):
 
 
 class Adversary():
-    def __init__(self, problem, matrix_assignment_func=None, matrix= None):
+    def __init__(self, problem, matrix_assignment_func=None, matrix=None):
         self.problem = problem
         if matrix_assignment_func is not None:
             self.matrix = np.zeros((problem.yes_len, problem.no_len))

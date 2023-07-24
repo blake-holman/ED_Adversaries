@@ -12,9 +12,7 @@ def threshold_k(n, k):
     no_instances = set()
     yes_instances = set()
 
-    
     no_instances = no_instances.union(itertools.permutations(tuple([0] * (n-k+1) + [1] * (k-1))))
-
     no_instances = list(no_instances)
     yes_instances = set(itertools.permutations(tuple([0]* (n-k) + [1]*k)))
     return Problem(no_instances, list(yes_instances))
