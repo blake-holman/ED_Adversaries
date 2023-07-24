@@ -101,7 +101,6 @@ class Adversary():
                 for j in range(self.problem.no_len):
                     if self.problem.no_instances[j][str_i] != self.problem.yes_instances[i][str_i]:
                         partial[i, j] = self.matrix[i, j]
-
         return partial
 
     def partial_norm(self, str_i):
