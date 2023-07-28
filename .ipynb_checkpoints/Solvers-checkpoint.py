@@ -106,7 +106,13 @@ def span_solver(problem, solver_params=None, mode=None):
         if mode[0] == 'trace':
             constraints += [cp.trace(X) <= mode[1]]
     constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
-    constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
+    if mode == '<=':
+        print('doing <=')
+        constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) <= 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
+    else: 
+        constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
+        
+    constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) >= t for instance in problem.no_instances + problem.yes_instances]
     if mode is not None and mode == 'min_trace':
         prob = cp.Problem(cp.Minimize(cp.trace(X)), constraints)
     else:
