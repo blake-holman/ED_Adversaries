@@ -92,7 +92,9 @@ def span_solver2(problem, r, solver_params=None):
     prob.solve(**solver_params)
     return prob.value, X.value
 
-def span_solver(problem, solver_params=None, mode=None):
+def span_solver(problem, solver_params=None, mode=None, target=None):
+    if target is None:
+        target = np.ones(problem.yes_len)
     if solver_params is None:
         solver_params = {'solver':'MOSEK', 'verbose': True}
     lang_size = problem.yes_len + problem.no_len
@@ -114,7 +116,7 @@ def span_solver(problem, solver_params=None, mode=None):
         print('doing <=')
         constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) >= 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
     else: 
-        constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
+        constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == target[problem.yes_instance_to_index[yes_i]] for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
         
     constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
     if mode is not None and mode == 'min_trace':
