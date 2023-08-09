@@ -118,6 +118,13 @@ def span_solver(problem, solver_params=None, mode=None, target=None):
             constraints += [cp.trace(X) <= mode[1]]
         if mode[0] == 'block':
             Y = cp.Variable((mode[1], mat_size))
+            Yp = cp.Variable(Y.shape, nonneg=True)
+            Yn = cp.Variable(Y.shape, nonneg=True)
+            constraints += [Y == Yp - Yn]
+            # print(list(itertools.product(list(range(Y.shape[0])), list(range(Y.shape[1])))))
+            # print([Yp[i,j] - Yn[i,j] == cp.max(Yp[i,j], - Yn[i,j]) for i,j in itertools.product(list(range(Y.shape[0])), list(range(Y.shape[1])))])
+            constraints += [Yp + Yn <= cp.maximum(Yp, Yn)]
+            
             constraints +=[
                 cp.bmat([
                     [X, Y.T],
