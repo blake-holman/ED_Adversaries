@@ -16,12 +16,14 @@ def partial(problem, i):
                 D[j + problem.no_len][k] = 1
                 D[k][j + problem.no_len] = 1 
     return D
+
+
 def big_mask_index_disagree(problem, i):
     lang_size = problem.yes_len + problem.no_len
     n = problem.n
     target = [np.zeros((lang_size, lang_size))]*i + [partial(problem, i)] + [np.zeros((lang_size, lang_size))]*(n-i-1)
-    return np.block([target if j==i else [np.zeros((lang_size, lang_size))] * n for j in range(n)])
-
+    mask = np.block([target if j==i else [np.zeros((lang_size, lang_size))] * n for j in range(n)])
+    return mask + mask.T
 
     
 def type_mask(problem):
@@ -63,7 +65,8 @@ def big_mask_index_disagree_type(problem, yes_instance, no_instance):
             big.append([np.zeros((lang_size, lang_size))]*i + [mask] + [np.zeros((lang_size, lang_size))]*(n-i-1))
         else:
             big.append([np.zeros((lang_size, lang_size))]*n)
-    return np.block(big)
+    mask = np.block(big)
+    return mask + mask.T
     # target = [np.zeros((lang_size, lang_size))]*i + [partial(problem, i)] + [np.zeros((lang_size, lang_size))]*(n-i-1)
     return np.block([[np.zeros((lang_size, lang_size))]*i + [type_mask(problem)] + [np.zeros((lang_size, lang_size))]*(n-i-1) for i in range(n)])
 
@@ -97,6 +100,66 @@ def ket(i, dim):
     v[i] = 1
     return v.T
 
+def span_dual_relax(problem, d, Q=0, solver_params=None):
+    if solver_params is None:
+        solver_params = {'solver':'MOSEK', 'verbose': True}
+    lang_size = problem.yes_len + problem.no_len
+    n = problem.n
+    mat_size = lang_size * n + 1
+    I = np.identity(mat_size)
+    T = cp.Variable((d, d), symmetric=True)
+    ts = {index: cp.Variable() for index in 
+         list(itertools.product(problem.yes_instances, problem.no_instances)) + problem.instances}
+    A_mats = {(yes_i, no_i): 
+              np.block([[big_mask_index_disagree_type(problem, yes_i, no_i), np.zeros((mat_size-1, 1))],
+                        [np.zeros((1, mat_size-1)),                          np.array([[0]])]])
+              
+              for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)}
+    B_mats = {instance: 
+              np.block([[big_mask_instance(problem, instance), np.zeros((mat_size-1, 1))],
+                        [np.zeros((1, mat_size-1)),            np.array([[-1]])]]) 
+                for instance in problem.no_instances + problem.yes_instances}
+    A0 = np.zeros((mat_size, mat_size))
+    A0[-1,-1] = 1
+    big_block = cp.bmat([
+        [A0,                             np.zeros((mat_size, d))],
+        [np.zeros((d, mat_size)), -T]
+    ])
+    
+    for (yes, no), Ai in A_mats.items():
+        # print(ts[(yes, no)])
+        big_block = big_block + ts[(yes, no)] * cp.bmat([
+            [Ai,                             np.zeros((mat_size, d))],
+            [np.zeros((d, mat_size)),        -1/d * np.eye(d)]
+                                                            ])
+    print('after')
+    for instance, Bi in B_mats.items():
+        # print(ts[instance]), 
+        big_block = big_block + ts[instance] * cp.bmat([
+            [Bi,                             np.zeros((mat_size, d))],
+            [np.zeros((d, mat_size)),        np.zeros((d, d))]
+        ])
+    print('after2')
+    
+    constraints = [big_block >> 0]
+    
+    # Diagonally dominant constraint
+    small_block = cp.Variable()
+#     for (yes, no), Ai in A_mats.items():
+#         small_block = small_block + ts[(yes, no)] * Ai
+#     for instance, Bi in B_mats.items():
+#         small_block = small_block + ts[(yes, no)] * Bi
+    
+    # small_block = np.eye(mat_size).T @ small_block @ np.eye(mat_size)
+    # for i in range(mat_size):
+    #     constraints += [
+    #         cp.norm(small_block[i,:], 1) <= 2*small_block[i,i]
+    #     ]
+    
+    prob = cp.Problem(cp.Maximize(cp.trace(T)), constraints)
+    prob.solve(**solver_params)
+    return small_block.value, big_block.value, T.value
+    
 def span_solver(problem, solver_params=None, mode=None, target=None):
     if target is None:
         target = np.ones(problem.yes_len)
@@ -114,34 +177,36 @@ def span_solver(problem, solver_params=None, mode=None, target=None):
     #     print('here')
     #     constraints.append(X >= 0)
     if mode is not None:
+        if mode == "pos":
+            constraints += [X >= 0]
         if mode[0] == 'trace':
             constraints += [cp.trace(X) <= mode[1]]
         if mode[0] == 'block':
             Y = cp.Variable((mode[1], mat_size))
             Yp = cp.Variable(Y.shape, nonneg=True)
             Yn = cp.Variable(Y.shape, nonneg=True)
-            constraints += [Y == Yp - Yn]
+            # constraints += [Y == Yp - Yn]
             # print(list(itertools.product(list(range(Y.shape[0])), list(range(Y.shape[1])))))
             # print([Yp[i,j] - Yn[i,j] == cp.max(Yp[i,j], - Yn[i,j]) for i,j in itertools.product(list(range(Y.shape[0])), list(range(Y.shape[1])))])
-            constraints += [Yp + Yn <= cp.maximum(Yp, Yn)]
+            # constraints += [Yp + Yn <= cp.maximum(Yp, Yn)]
             
             constraints +=[
                 cp.bmat([
                     [X, Y.T],
                     [Y, np.eye(mode[1])]
                         ]) >> 0,
-                cp.sum(X) <= cp.sum(Y) * np.sqrt(mode[2] * problem.len) + problem.yes_len * problem.no_len,
-                cp.trace(X) <= cp.sum(Y) * problem.len * n,
+                # cp.sum(X) <= cp.sum(Y) * np.sqrt(mode[2] * problem.len) + problem.yes_len * problem.no_len,
+                # cp.trace(X) <= cp.sum(Y) * problem.len * n,
                 cp.multiply(np.ones((mat_size, mat_size)) - np.kron(np.identity(n), np.ones((lang_size, lang_size))), X) == 0
             ]
             
-            if len(mode) >= 3:
-                constraints += [
-                    cp.sum(Y) >= np.sqrt(mode[2] * problem.len)
-                ]
-                constraints += [
-                    cp.sum(Y @ np.kron(np.ones(n), ket(i, problem.len))) >= mode[2] for i in range(problem.len)
-                ]
+            # if len(mode) >= 3:
+                # constraints += [
+                    # cp.sum(Y) >= np.sqrt(mode[2] * problem.len)
+                # ]
+                # constraints += [
+                    # cp.sum(Y @ np.kron(np.ones(n), ket(i, problem.len))) >= mode[2] for i in range(problem.len)
+                # ]
             for index1, index2 in itertools.product(list(range(problem.yes_len)), list(range(problem.no_len))):
                 instance1 = problem.yes_instances[index1]
                 instance2 = problem.no_instances[index2]
@@ -151,9 +216,10 @@ def span_solver(problem, solver_params=None, mode=None, target=None):
                     ket_index = ket(j, n)
                     keti = np.kron(ket_index, ket_instance1)
                     ketj = np.kron(ket_index, ket_instance2)
+                    print('s')
                     constraints += [
                         (keti+ketj).T @ X @ (keti+ketj)>= cp.power(cp.norm(Y@(keti+ketj) , 2), 2),
-                       (keti-ketj).T @ X @ (keti-ketj) >= cp.power(cp.norm(Y@(keti-ketj), 2), 2)
+                        (keti-ketj).T @ X @ (keti-ketj) >= cp.power(cp.norm(Y@(keti-ketj), 2), 2)
                     ]
                     # constraints += [
                         # (keti+ketj).T @ X @ (keti+ketj) <= cp.sum(Y@(keti+ketj)) + 1,
@@ -163,7 +229,7 @@ def span_solver(problem, solver_params=None, mode=None, target=None):
 
             
             
-    # constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
+    constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
     if mode == '<=':
         print('doing <=')
         constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) >= 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
