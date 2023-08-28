@@ -145,16 +145,15 @@ def span_dual_relax(problem, d, Q=0, solver_params=None):
     
     # Diagonally dominant constraint
     small_block = cp.Variable()
-#     for (yes, no), Ai in A_mats.items():
-#         small_block = small_block + ts[(yes, no)] * Ai
-#     for instance, Bi in B_mats.items():
-#         small_block = small_block + ts[(yes, no)] * Bi
+    for (yes, no), Ai in A_mats.items():
+        small_block = small_block + ts[(yes, no)] * Ai
+    for instance, Bi in B_mats.items():
+        small_block = small_block + ts[(yes, no)] * Bi
     
-    # small_block = np.eye(mat_size).T @ small_block @ np.eye(mat_size)
-    # for i in range(mat_size):
-    #     constraints += [
-    #         cp.norm(small_block[i,:], 1) <= 2*small_block[i,i]
-    #     ]
+    for i in range(mat_size):
+        constraints += [
+            cp.norm(small_block[i,:], 1) <= 2*small_block[i,i]
+        ]
     
     prob = cp.Problem(cp.Maximize(cp.trace(T)), constraints)
     prob.solve(**solver_params)
@@ -181,10 +180,14 @@ def span_solver(problem, solver_params=None, mode=None, target=None):
             constraints += [X >= 0]
         if mode[0] == 'trace':
             constraints += [cp.trace(X) <= mode[1]]
+        if mode[0] == 'logdet':
+            print('det')
+            eps = mode[1]
+            r = mode[2]
+            constraints += [cp.log_det(X+eps * np.eye(mat_size)) <= r]
+            
         if mode[0] == 'block':
             Y = cp.Variable((mode[1], mat_size))
-            Yp = cp.Variable(Y.shape, nonneg=True)
-            Yn = cp.Variable(Y.shape, nonneg=True)
             # constraints += [Y == Yp - Yn]
             # print(list(itertools.product(list(range(Y.shape[0])), list(range(Y.shape[1])))))
             # print([Yp[i,j] - Yn[i,j] == cp.max(Yp[i,j], - Yn[i,j]) for i,j in itertools.product(list(range(Y.shape[0])), list(range(Y.shape[1])))])
@@ -199,14 +202,16 @@ def span_solver(problem, solver_params=None, mode=None, target=None):
                 # cp.trace(X) <= cp.sum(Y) * problem.len * n,
                 cp.multiply(np.ones((mat_size, mat_size)) - np.kron(np.identity(n), np.ones((lang_size, lang_size))), X) == 0
             ]
-            
-            # if len(mode) >= 3:
-                # constraints += [
-                    # cp.sum(Y) >= np.sqrt(mode[2] * problem.len)
-                # ]
-                # constraints += [
-                    # cp.sum(Y @ np.kron(np.ones(n), ket(i, problem.len))) >= mode[2] for i in range(problem.len)
-                # ]
+            constraints += [
+                cp.trace(X) >= cp.norm(Y, "fro")
+            ]
+            if len(mode) >= 3:
+                constraints += [
+                    cp.sum(Y) >= np.sqrt(mode[2] * problem.len)
+                ]
+                constraints += [
+                    cp.sum(Y @ np.kron(np.ones(n), ket(i, problem.len))) >= mode[2] for i in range(problem.len)
+                ]
             for index1, index2 in itertools.product(list(range(problem.yes_len)), list(range(problem.no_len))):
                 instance1 = problem.yes_instances[index1]
                 instance2 = problem.no_instances[index2]
@@ -222,10 +227,10 @@ def span_solver(problem, solver_params=None, mode=None, target=None):
                         (keti-ketj).T @ X @ (keti-ketj) >= cp.power(cp.norm(Y@(keti-ketj), 2), 2)
                     ]
                     # constraints += [
-                        # (keti+ketj).T @ X @ (keti+ketj) <= cp.sum(Y@(keti+ketj)) + 1,
-                        # (keti-ketj).T @ X @ (keti-ketj) <= cp.sum(Y@(keti+ketj))*problem.len - 1/n 
+                    #     (keti+ketj).T @ X @ (keti+ketj) <= cp.sum(Y@(keti+ketj)) + 1,
+                    #     (keti-ketj).T @ X @ (keti-ketj) <= cp.sum(Y@(keti+ketj))*problem.len - 1/n 
                     # ]
-                # constraints += [cp.sum_squares(Y[:, problem.instance_to_index[instance]]) <= t for instance in problem.no_instances + problem.yes_instances]
+                constraints += [cp.sum_squares(Y[:, problem.instance_to_index[instance]]) <= t for instance in problem.no_instances + problem.yes_instances]
 
             
             
