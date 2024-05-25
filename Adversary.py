@@ -9,7 +9,9 @@ def sort_lexico(iter):
 
 def to_str(L):
     return ''.join([str(x) for x in L])
-            
+def to_str_list(L):
+    return [to_str(x) for x in L]
+
 def hamming_dist(a, b):
     assert len(a) == len(b)
     return len([i for i in range(len(a)) if a[i] != b[i]])
@@ -48,7 +50,7 @@ class Problem():
         return to_print
 
 
-def visualize(mat, labels=None, save=None):
+def visualize(mat, labels=None, to_string=False, save=None):
     fig, ax = plt.subplots()
     heatmap = ax.imshow(mat)
     plt.tight_layout()
@@ -62,12 +64,15 @@ def visualize(mat, labels=None, save=None):
     if labels is not None:
         fig.subplots_adjust(bottom=0.25, left=0.25)
         xlabels, ylabels = labels
+        if to_string:
+            xlables = to_str_list(xlabels)
+            ylables = to_str_list(copy(ylabels))
         print(xlabels)
         print(ylabels)
         print(mat.shape)
         ax.set_xticks(np.arange(mat.shape[1]), minor=False)
         ax.set_yticks(np.arange(mat.shape[0]), minor=False)
-
+        print(len(xlabels))
         ax.set_xticklabels(xlabels, rotation=90, fontsize=font_sizey)
         ax.set_yticklabels(ylabels, fontsize=font_sizey)
     if save is not None:
