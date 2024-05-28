@@ -52,7 +52,7 @@ class Problem():
 
 def visualize(mat, labels=None, to_string=False, save=None):
     fig, ax = plt.subplots()
-    heatmap = ax.imshow(mat)
+    heatmap = ax.imshow(mat.T)
     plt.tight_layout()
     figh, figw = fig.get_size_inches()
     font_sizey = figh * 72  / 3 
@@ -65,8 +65,8 @@ def visualize(mat, labels=None, to_string=False, save=None):
         fig.subplots_adjust(bottom=0.25, left=0.25)
         xlabels, ylabels = labels
         if to_string:
-            xlables = to_str_list(xlabels)
-            ylables = to_str_list(copy(ylabels))
+            xlabels = to_str_list(xlabels)
+            ylabels = to_str_list(ylabels)
         print(xlabels)
         print(ylabels)
         print(mat.shape)
