@@ -52,7 +52,7 @@ class Problem():
 
 def visualize(mat, labels=None, to_string=False, save=None):
     fig, ax = plt.subplots()
-    heatmap = ax.imshow(mat.T)
+    heatmap = ax.imshow(mat)
     plt.tight_layout()
     figh, figw = fig.get_size_inches()
     font_sizey = figh * 72  / 3 
