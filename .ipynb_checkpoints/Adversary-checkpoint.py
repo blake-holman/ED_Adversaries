@@ -67,12 +67,12 @@ def visualize(mat, labels=None, to_string=False, save=None):
         if to_string:
             xlabels = to_str_list(xlabels)
             ylabels = to_str_list(ylabels)
-        print(xlabels)
-        print(ylabels)
-        print(mat.shape)
+        # print(xlabels)
+        # print(ylabels)
+        # print(mat.shape)
         ax.set_xticks(np.arange(mat.shape[1]), minor=False)
         ax.set_yticks(np.arange(mat.shape[0]), minor=False)
-        print(len(xlabels))
+        # print(len(xlabels))
         ax.set_xticklabels(xlabels, rotation=90, fontsize=font_sizey)
         ax.set_yticklabels(ylabels, fontsize=font_sizey)
     if save is not None:
