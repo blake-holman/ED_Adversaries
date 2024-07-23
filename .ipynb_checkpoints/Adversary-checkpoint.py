@@ -50,7 +50,12 @@ class Problem():
         return to_print
 
 
-def visualize(mat, labels=None, to_string=False, save=None):
+def visualize(mat, labels=None, to_string=False, save=None, complex=False):
+    if complex:
+        mat = np.block([np.real(mat), np.zeros(mat.shape), np.imag(mat)])
+        if labels is not None:
+            labels = [labels[0] + [""]*len(labels[0]) + labels[0], labels[1]]
+    
     fig, ax = plt.subplots()
     heatmap = ax.imshow(mat)
     plt.tight_layout()
@@ -79,6 +84,7 @@ def visualize(mat, labels=None, to_string=False, save=None):
         plt.savefig(save)
     else:
         plt.show()
+
 
 
 class Adversary():
