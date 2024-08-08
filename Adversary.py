@@ -124,7 +124,7 @@ class Adversary():
         return self.norm() / np.max([self.partial_norm(i) for i in range(self.problem.n)])
 
     def visualize_matrix(self, save=None):
-        visualize(self.matrix, (self.problem.no_labels, self.problem.yes_labels), save=save)
+        visualize(self.matrix, (self.problem.s, self.problem.yes_labels), save=save)
         
     def visualize_partial(self, i, reduced=False):
         if reduced:
