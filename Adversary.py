@@ -50,7 +50,7 @@ class Problem():
         return to_print
 
 
-def visualize(mat, labels=None, to_string=False, save=None, complex=False):
+def visualize(mat, labels=None, to_string=False, save=None, complex=False, title=None):
     if complex:
         mat = np.block([np.real(mat), np.zeros(mat.shape), np.imag(mat)])
         if labels is not None:
@@ -66,6 +66,9 @@ def visualize(mat, labels=None, to_string=False, save=None, complex=False):
     
     # fig.set_size_inches(mat., mat.shape[1]/5)
     plt.colorbar(heatmap)
+    if title is not None:
+        plt.title(title)
+        
     if labels is not None:
         fig.subplots_adjust(bottom=0.25, left=0.25)
         xlabels, ylabels = labels
