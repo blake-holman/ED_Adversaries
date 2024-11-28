@@ -50,12 +50,14 @@ class Problem():
         return to_print
 
 
-def visualize(mat, labels=None, to_string=False, save=None, complex=False, title=None):
-    if complex:
+def visualize(mat, labels=None, to_string=False, save=None, title=None):
+    if np.linalg.norm(np.imag(mat))>0:
         mat = np.block([np.real(mat), np.zeros(mat.shape), np.imag(mat)])
         if labels is not None:
             labels = [labels[0] + [""]*len(labels[0]) + labels[0], labels[1]]
-    
+    else: 
+        mat = np.real(mat)
+        
     fig, ax = plt.subplots()
     heatmap = ax.imshow(mat)
     plt.tight_layout()
@@ -105,7 +107,11 @@ class Adversary():
                 self.matrix = matrix[problem.no_len:, :problem.no_len]
         else:
             print('mat:' + str(matrix))
-
+        self.full_matrix = np.block([
+            [np.zeros((problem.no_len, problem.yes_len)), self.matrix],
+            [self.matrix.T, np.zeros((problem.yes_len, problem.no_len))]
+        ])
+        
     def partial_matrix(self, str_i, reduced=False):
         if reduced:
             pass

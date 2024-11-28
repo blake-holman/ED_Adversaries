@@ -172,66 +172,6 @@ def span_solver(problem, solver_params=None, mode=None, target=None):
     t = cp.Variable()
     I = np.identity(mat_size)
     constraints = []
-    # if mode == '<=':
-    #     print('here')
-    #     constraints.append(X >= 0)
-    if mode is not None:
-        if mode == "pos":
-            constraints += [X >= 0]
-        if mode[0] == 'trace':
-            constraints += [cp.trace(X) <= mode[1]]
-        if mode[0] == 'logdet':
-            print('det')
-            eps = mode[1]
-            r = mode[2]
-            constraints += [cp.log_det(X+eps * np.eye(mat_size)) <= r]
-            
-        if mode[0] == 'block':
-            Y = cp.Variable((mode[1], mat_size))
-            # constraints += [Y == Yp - Yn]
-            # print(list(itertools.product(list(range(Y.shape[0])), list(range(Y.shape[1])))))
-            # print([Yp[i,j] - Yn[i,j] == cp.max(Yp[i,j], - Yn[i,j]) for i,j in itertools.product(list(range(Y.shape[0])), list(range(Y.shape[1])))])
-            # constraints += [Yp + Yn <= cp.maximum(Yp, Yn)]
-            
-            constraints +=[
-                cp.bmat([
-                    [X, Y.T],
-                    [Y, np.eye(mode[1])]
-                        ]) >> 0,
-                # cp.sum(X) <= cp.sum(Y) * np.sqrt(mode[2] * problem.len) + problem.yes_len * problem.no_len,
-                # cp.trace(X) <= cp.sum(Y) * problem.len * n,
-                cp.multiply(np.ones((mat_size, mat_size)) - np.kron(np.identity(n), np.ones((lang_size, lang_size))), X) == 0
-            ]
-            constraints += [
-                cp.trace(X) >= cp.norm(Y, "fro")
-            ]
-            if len(mode) >= 3:
-                constraints += [
-                    cp.sum(Y) >= np.sqrt(mode[2] * problem.len)
-                ]
-                constraints += [
-                    cp.sum(Y @ np.kron(np.ones(n), ket(i, problem.len))) >= mode[2] for i in range(problem.len)
-                ]
-            for index1, index2 in itertools.product(list(range(problem.yes_len)), list(range(problem.no_len))):
-                instance1 = problem.yes_instances[index1]
-                instance2 = problem.no_instances[index2]
-                for j in range(n):
-                    ket_instance1 = ket(index1, problem.len)
-                    ket_instance2 = ket(index2, problem.len)
-                    ket_index = ket(j, n)
-                    keti = np.kron(ket_index, ket_instance1)
-                    ketj = np.kron(ket_index, ket_instance2)
-                    print('s')
-                    constraints += [
-                        (keti+ketj).T @ X @ (keti+ketj)>= cp.power(cp.norm(Y@(keti+ketj) , 2), 2),
-                        (keti-ketj).T @ X @ (keti-ketj) >= cp.power(cp.norm(Y@(keti-ketj), 2), 2)
-                    ]
-                    # constraints += [
-                    #     (keti+ketj).T @ X @ (keti+ketj) <= cp.sum(Y@(keti+ketj)) + 1,
-                    #     (keti-ketj).T @ X @ (keti-ketj) <= cp.sum(Y@(keti+ketj))*problem.len - 1/n 
-                    # ]
-                constraints += [cp.sum_squares(Y[:, problem.instance_to_index[instance]]) <= t for instance in problem.no_instances + problem.yes_instances]
-
             
             
     constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
