@@ -160,7 +160,7 @@ def span_dual_relax(problem, d, Q=0, solver_params=None):
     prob.solve(**solver_params)
     return small_block.value, big_block.value, T.value
     
-def span_solver(problem, solver_params=None, mode=None, target=None):
+def span_solver(problem, solver_params=None, target=None, return_mats=False):
     if target is None:
         target = np.ones(problem.yes_len)
     if solver_params is None:
@@ -169,27 +169,20 @@ def span_solver(problem, solver_params=None, mode=None, target=None):
     n = problem.n
     mat_size = lang_size * n
     X = cp.Variable((mat_size, mat_size), PSD=True)
-    Y = None
     t = cp.Variable()
     I = np.identity(mat_size)
     constraints = []
             
             
     constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
-    if mode == '<=':
-        print('doing <=')
-        constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) >= 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
-    else: 
-        constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == target[problem.yes_instance_to_index[yes_i]] for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
+    
+    constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == target[problem.yes_instance_to_index[yes_i]] for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
         
     constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
-    if mode is not None and mode == 'min_trace':
-        prob = cp.Problem(cp.Minimize(cp.trace(X)), constraints)
-    else:
-        prob = cp.Problem(cp.Minimize(t), constraints)
+
+    prob = cp.Problem(cp.Minimize(t), constraints)
     prob.solve(**solver_params)
-    if Y is not None:
-        return prob.value, X.value, Y.value
+
     
     return prob.value, X.value
 
