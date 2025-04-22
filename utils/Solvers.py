@@ -161,6 +161,7 @@ def span_dual_relax(problem, d, Q=0, solver_params=None):
     return small_block.value, big_block.value, T.value
     
 def span_solver(problem, solver_params=None, target=None, return_mats=False):
+    print(return_mats)
     if target is None:
         target = np.ones(problem.yes_len)
     if solver_params is None:
@@ -173,10 +174,15 @@ def span_solver(problem, solver_params=None, target=None, return_mats=False):
     I = np.identity(mat_size)
     constraints = []
             
-            
+    if return_mats:
+        obj_mat = np.zeros(X.shape)
+        constraint_mats = [big_mask_index_disagree_type(problem, yes_i, no_i) for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
+        constraint_mats += [big_mask_instance(problem, instance) for instance in problem.no_instances + problem.yes_instances]
+        return constraint_mats
+        
     constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == 1 for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
     
-    constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == target[problem.yes_instance_to_index[yes_i]] for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
+    # constraints += [cp.sum(cp.multiply(big_mask_index_disagree_type(problem, yes_i, no_i), X)) == target[problem.yes_instance_to_index[yes_i]] for yes_i, no_i in itertools.product(problem.yes_instances, problem.no_instances)]
         
     constraints += [cp.trace(cp.multiply(big_mask_instance(problem, instance), X)) <= t for instance in problem.no_instances + problem.yes_instances]
 
