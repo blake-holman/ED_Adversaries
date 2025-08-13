@@ -36,10 +36,13 @@ def type_mask(problem):
             mask[j][i + problem.no_len] = 1 
     return mask
 
-def instance_mask(problem, instance):
+def instance_mask(problem, instance, instance2=None):
+    if instance2 is None:
+        instance2 = instance
     lang_size = problem.yes_len + problem.no_len
     mask = np.zeros((lang_size, lang_size))
-    mask[problem.instance_to_index[instance]][problem.instance_to_index[instance]] = 1
+    mask[problem.instance_to_index[instance]][problem.instance_to_index[instance2]] = 1
+    mask[problem.instance_to_index[instance2]][problem.instance_to_index[instance]] = 1
     return mask 
 
 def big_mask_instance(problem, instance):

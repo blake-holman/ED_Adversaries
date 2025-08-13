@@ -25,10 +25,10 @@ class Adversary():
                 self.matrix = matrix[problem.no_len:, :problem.no_len]
         else:
             print('mat:' + str(matrix))
-        self.full_matrix = np.block([
-            [np.zeros((problem.no_len, problem.yes_len)), self.matrix],
-            [self.matrix.T, np.zeros((problem.yes_len, problem.no_len))]
-        ])
+        # self.full_matrix = np.block([
+        #     [np.zeros((problem.no_len, problem.no_len)), self.matrix],
+        #     [self.matrix.T, np.zeros((problem.yes_len, problem.yes_len))]
+        # ])
         
     def partial_matrix(self, str_i, reduced=False):
         if reduced:
@@ -51,7 +51,7 @@ class Adversary():
         return self.norm() / np.max([self.partial_norm(i) for i in range(self.problem.n)])
 
     def visualize_matrix(self, save=None):
-        visualize(self.matrix, (self.problem.s, self.problem.yes_labels), save=save)
+        visualize(self.matrix, (self.problem.no_labels, self.problem.yes_labels), save=save)
         
     def visualize_partial(self, i, reduced=False):
         if reduced:

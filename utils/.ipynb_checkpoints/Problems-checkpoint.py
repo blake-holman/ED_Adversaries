@@ -14,10 +14,10 @@ class Problem():
             assert len(instance) == self.n
         self.no_instances = no_instances
         self.yes_instances = yes_instances
-        self.instances = no_instances + yes_instances
         if sort:
             sort_lexico(self.no_instances)
             sort_lexico(self.yes_instances)
+        self.instances = no_instances + yes_instances
         self.no_len = len(self.no_instances)
         self.yes_len = len(self.yes_instances)
         self.len = self.no_len + self.yes_len
